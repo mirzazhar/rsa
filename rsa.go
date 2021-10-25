@@ -2,6 +2,7 @@ package rsa
 
 import (
 	"crypto/rand"
+	"crypto/sha256"
 	"errors"
 	"io"
 	"math/big"
@@ -148,4 +149,18 @@ func (pub *PublicKey) HommorphicEncMultiple(ciphertexts ...[]byte) ([]byte, erro
 			pub.N)
 	}
 	return C.Bytes(), nil
+}
+
+// Signature generates signature over the given message. It returns signature
+// value as a byte array.
+func (priv *PrivateKey) Signature(message []byte) []byte {
+	hashofm := sha256.Sum256(message)
+	m := new(big.Int).SetBytes(hashofm[:])
+
+	// s = m^d mod n
+	s := new(big.Int).Mod(
+		new(big.Int).Exp(m, priv.D, priv.N),
+		priv.N,
+	)
+	return s.Bytes()
 }
