@@ -164,3 +164,27 @@ func (priv *PrivateKey) Signature(message []byte) []byte {
 	)
 	return s.Bytes()
 }
+
+// SigVerify verifies signature over the given message and signature value.
+// It returns true as a boolean value if signature is verify correctly. Otherwise
+// it returns false along with an error message.
+func (pub *PublicKey) SigVerify(sig, message []byte) (bool, error) {
+	hashofm := sha256.Sum256(message)
+	m := new(big.Int).SetBytes(hashofm[:])
+
+	s := new(big.Int).SetBytes(sig)
+	if s.Cmp(pub.N) == 1 { //  s < N
+		return false, ErrSigTooLong
+	}
+
+	// v = s^e mod n
+	v := new(big.Int).Mod(
+		new(big.Int).Exp(s, pub.E, pub.N),
+		pub.N,
+	)
+
+	if m.Cmp(v) == 0 {
+		return true, nil
+	}
+	return false, errors.New("signature is not verified")
+}
