@@ -12,6 +12,19 @@ var ErrMessageTooLong = errors.New("rsa: message too long for RSA public key siz
 var ErrCipherTooLong = errors.New("rsa: cipher too long for RSA public key size")
 var ErrSigTooLong = errors.New("rsa: signature too long for RSA public key size")
 
+// PrivateKey represents RSA private key.
+type PrivateKey struct {
+	PublicKey
+	Phi *big.Int // phi(n), (p-1)*(q-1)
+	D   *big.Int // d = e^(-1) mod phi(n)
+}
+
+// PublicKey represents RSA public key.
+type PublicKey struct {
+	N *big.Int // modulus n
+	E *big.Int // e
+}
+
 // GenerateKey generates RSA private key.
 func GenerateKey(random io.Reader, bits int) (*PrivateKey, error) {
 	// prime number p
@@ -68,15 +81,18 @@ func GenerateKey(random io.Reader, bits int) (*PrivateKey, error) {
 	}, nil
 }
 
-// PrivateKey represents RSA private key.
-type PrivateKey struct {
-	PublicKey
-	Phi *big.Int // phi(n), (p-1)*(q-1)
-	D   *big.Int // d = e^(-1) mod phi(n)
-}
+// Encrypt encrypts a plain text represented as a byte array. It returns
+// an error if plain text value is larger than modulus N of Public key.
+func (pub *PublicKey) Encrypt(plainText []byte) ([]byte, error) {
+	m := new(big.Int).SetBytes(plainText)
+	if m.Cmp(pub.N) == 1 { //  m < N
+		return nil, ErrMessageTooLong
+	}
 
-// PublicKey represents RSA public key.
-type PublicKey struct {
-	N *big.Int // modulus n
-	E *big.Int // e
+	// c = m^e mod N
+	c := new(big.Int).Mod(
+		new(big.Int).Exp(m, pub.E, pub.N),
+		pub.N,
+	)
+	return c.Bytes(), nil
 }
