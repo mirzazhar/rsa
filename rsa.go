@@ -112,3 +112,40 @@ func (priv *PrivateKey) Decrypt(ciphertext []byte) ([]byte, error) {
 	)
 	return m.Bytes(), nil
 }
+
+// HomomorphicEncTwo performs homomorphic operation over two chiphers.
+// RSA has multiplicative homomorphic property, so resultant cipher
+// contains the product of two numbers.
+func (pub *PublicKey) HomomorphicEncTwo(ciphertext1, ciphertext2 []byte) ([]byte, error) {
+	c1 := new(big.Int).SetBytes(ciphertext1)
+	c2 := new(big.Int).SetBytes(ciphertext2)
+	if c1.Cmp(pub.N) == 1 && c2.Cmp(pub.N) == 1 { //  c < N
+		return nil, ErrCipherTooLong
+	}
+
+	// C = c1*c2 mod N
+	C := new(big.Int).Mod(
+		new(big.Int).Mul(c1, c2),
+		pub.N)
+	return C.Bytes(), nil
+}
+
+// HommorphicEncMultiple performs homomorphic operation over multiple chiphers.
+// RSA has multiplicative homomorphic property, so resultant cipher
+// contains the product of multiple numbers.
+func (pub *PublicKey) HommorphicEncMultiple(ciphertexts ...[]byte) ([]byte, error) {
+	C := one // since, c = 1^e mod n is equal to 1
+
+	for i := 0; i < len(ciphertexts); i++ {
+		c := new(big.Int).SetBytes(ciphertexts[i])
+		if c.Cmp(pub.N) == 1 { //  c < N
+			return nil, ErrCipherTooLong
+		}
+
+		// C = c1*c2*c3...cn mod N
+		C = new(big.Int).Mod(
+			new(big.Int).Mul(C, c),
+			pub.N)
+	}
+	return C.Bytes(), nil
+}
