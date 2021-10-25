@@ -96,3 +96,19 @@ func (pub *PublicKey) Encrypt(plainText []byte) ([]byte, error) {
 	)
 	return c.Bytes(), nil
 }
+
+// Decrypt decrypts the passed cipher text. It returns
+// an error if cipher text value is larger than modulus N of Public key.
+func (priv *PrivateKey) Decrypt(ciphertext []byte) ([]byte, error) {
+	c := new(big.Int).SetBytes(ciphertext)
+	if c.Cmp(priv.N) == 1 { //  c < N
+		return nil, ErrCipherTooLong
+	}
+
+	// m = c^d  mod N
+	m := new(big.Int).Mod(
+		new(big.Int).Exp(c, priv.D, priv.N),
+		priv.N,
+	)
+	return m.Bytes(), nil
+}
